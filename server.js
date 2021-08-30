@@ -1,170 +1,129 @@
-'use strict';
-const mongoose = require('mongoose');
-const express = require('express');
-const cors = require('cors');
-const { default: axios } = require('axios');
-require('dotenv').config();
+"use strict";
+const mongoose = require("mongoose");
+const express = require("express");
+const cors = require("cors");
+const { default: axios } = require("axios");
+require("dotenv").config();
 const server = express();
 server.use(cors());
 server.use(express.json());
 const PORT = process.env.PORT;
 
-mongoose.connect(`${process.env.MONGO_DB_ATLAS}`, { useNewUrlParser: true, useUnifiedTopology: true });
-
+mongoose.connect(
+  "mongodb://adhammhaydat:12345@cluster0-shard-00-00.qi4a6.mongodb.net:27017,cluster0-shard-00-01.qi4a6.mongodb.net:27017,cluster0-shard-00-02.qi4a6.mongodb.net:27017/colors?ssl=true&replicaSet=atlas-ipru7s-shard-0&authSource=admin&retryWrites=true&w=majority", { useNewUrlParser: true ,useUnifiedTopology: true}
+);
 
 const ColorSchema = new mongoose.Schema({
-    title: String,
-    imageUrl: String,
+  title: String,
+  imageUrl: String,
 });
 
 const UserSchema = new mongoose.Schema({
-    email: String,
-    colors: [ColorSchema]
+  email: String,
+  colors: [ColorSchema],
 });
 
-const UsersModel = mongoose.model('User', UserSchema);
-
-
+const UsersModel = mongoose.model("User", UserSchema);
 
 function SeedUsersData() {
-    let ibrahim = new UsersModel(
-        {
-            email: 'ibrahimkuderat@gmail.com',
-            colors: [
-                {
-                    title: 'Black',
-                    imageUrl: 'http://www.colourlovers.com/img/000000/100/100/Black.png'
-                }
-            ]
-        }
-    )
+  let ibrahim = new UsersModel({
+    email: "adhammohidat123@gmail.com",
+    colors: [
+      {
+        title: "Black",
+        imageUrl: "http://www.colourlovers.com/img/000000/100/100/Black.png",
+      },
+    ],
+  });
 
-    let razan = new UsersModel(
-        {
-            email: 'quraanrazan282@gmail.com',
-            colors: [
-                {
-                    title: 'Black',
-                    imageUrl: 'http://www.colourlovers.com/img/000000/100/100/Black.png'
-                },
-                {
-                    title: 'dutch teal',
-                    imageUrl: 'http://www.colourlovers.com/img/1693A5/100/100/dutch_teal.png'
-                }
-            ]
-        }
-    )
+  let razan = new UsersModel({
+    email: "quraanrazan282@gmail.com",
+    colors: [
+      {
+        title: "Black",
+        imageUrl: "http://www.colourlovers.com/img/000000/100/100/Black.png",
+      },
+      {
+        title: "dutch teal",
+        imageUrl:
+          "http://www.colourlovers.com/img/1693A5/100/100/dutch_teal.png",
+      },
+    ],
+  });
 
-    ibrahim.save();
-    razan.save();
+  ibrahim.save();
+  razan.save();
+  console.log(ibrahim, razan);
 }
+// SeedUsersData();
 
-// This For Getting All Data From API
-
-
-class Color {
-    constructor(title, imageUrl) {
-        this.title = title,
-     this.imageUrl = imageUrl
-    }
+function gettingColors(req, res) {
+  axios
+    .get("https://flowers-api-13.herokuapp.com/getFlowers")
+    .then((result) => {
+      res.send(result.data);
+    });
 }
-
-server.get('/allcolors', async (req, res) => {
-    let dataFromAPI = await axios.get('https://ltuc-asac-api.herokuapp.com/allColorData');
-    let data = dataFromAPI.data.map(color => {
-        return new Color(color.title, color.imageUrl)
-    })
-    res.status(200).send(data)
-})
-
-///////////////////////////////////////////////
-
-// This For User Colors
-server.get('/favcolors/:email', gettingFavColors);
-server.post('/addtofav/:email', addToFav);
-server.delete('/deletecolor/:email', deleteColor);
-server.put('/updatecolor/:email' , updateColor)
-
 
 function gettingFavColors(req, res) {
-    let userEmail = req.params.email;
-
-    UsersModel.find({ email: userEmail }, (error, Data) => {
-        if (error) {
-            res.status(404).send(error)
-        }
-        else {
-            res.status(200).send(Data[0].colors)
-        }
-    })
+  let email = req.params.email;
+  UsersModel.find({ email: email }, (err, result) => {
+    if (err) {
+      res.send(err);
+    } else {
+      res.send(result);
+    }
+  });
 }
 
 function addToFav(req, res) {
-    let userEmail = req.params.email;
-    const { title, imageUrl } = req.body;
-    UsersModel.find({ email: userEmail }, (error, Data) => {
-        if (error) {
-            res.status(404).send(error)
-        }
-        else {
-            Data[0].colors.push(
-                {
-                    title: title,
-                    imageUrl: imageUrl
-                }
-            )
-            Data[0].save();
-        }
-    })
+  const { name, photo } = req.body;
+  let email = req.params.email;
+  UsersModel.findOne({ email: email }, (err, ele) => {
+    ele.colors.push({
+      title: name,
+      imageUrl: photo,
+    });
+    ele.save();
+    res.send(ele);
+  });
 }
 
 function deleteColor(req, res) {
-    let userEmail = req.params.email;
-    let colorIndex = Number(req.query.index);
-    UsersModel.find({ email: userEmail }, (error, Data) => {
-        if (error) {
-            res.status(404).send(error)
-        }
-        else {
-            let filtered = Data[0].colors.filter((color, index) => {
-              if (index !== colorIndex) { return color }
-            })
-            Data[0].colors = filtered;
-            Data[0].save();
-            res.status(200).send(Data[0].colors)
-        }
-    })
+  let email = req.params.email;
+  let id = req.params.id;
+
+  UsersModel.findOne({ email: email }, (err, ele) => {
+    ele.colors.splice(id, 1);
+    ele.save();
+    res.send(ele);
+  });
 }
 
-function updateColor (req , res) {
-    let userEmail = req.params.email;
-    let colorIndex = Number(req.query.index);
-    const { title , imageUrl } = req.body;
-
-    UsersModel.find({ email: userEmail }, (error, Data) => {
-        if (error) {
-            res.status(404).send(error)
-        }
-        else {
-           Data[0].colors.splice(colorIndex , 1 , {
-            title : title ,
-            imageUrl : imageUrl
-           })
-           Data[0].save();
-           res.status(200).send(Data[0].colors)
-        }
-    })
+function updateColor(req, res) {
+  let email = req.params.email;
+  let id = req.params.id;
+  let data = { title: req.body.title, imageUrl: req.body.imageUrl };
+  UsersModel.findOne({ email: email }, (err, ele) => {
+    if (err) {
+      console.log(err);
+    } else {
+      ele.colors.splice(id, 1, data);
+      ele.save();
+      res.send(ele);
+    }
+  });
 }
+server.get("/colors", gettingColors);
+server.get("/favcolors/:email", gettingFavColors);
+server.post("/addtofav/:email", addToFav);
+server.delete("/deletecolor/:email/:id", deleteColor);
+server.put("/updatecolor/:email/:id", updateColor);
 
-
-
-
-
-
-server.get('/', (req, res) => {
-    res.status(200).send('All Good ...')
-})
+server.get("/", (req, res) => {
+  res.status(200).send("All Good ...");
+});
 
 server.listen(PORT, () => {
-    console.log(`Listining on port : ${PORT}`);
-})
+  console.log(`Listining on port : ${PORT}`);
+});
